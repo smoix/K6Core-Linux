@@ -1,0 +1,64 @@
+# CPU Architecture Optimization (Force AMD K6 / K6-2 / K6-3)
+CONFIG_MK6=y
+
+# Standard Low Memory Tweak (Fit entire physical 512MB RAM completely below 896MB split)
+CONFIG_NOHIGHMEM=y
+
+# Disable KASLR: known to hang silently on some vintage real BIOS/hardware
+# (unreliable e820 maps, no RDRAND) even though it works fine under emulation.
+# CONFIG_RANDOMIZE_BASE is not set
+
+# Chipset, PCI and AGP Bus Drivers (ALi Aladdin V and VIA MVP3 support)
+CONFIG_PCI=y
+CONFIG_AGP=y
+CONFIG_AGP_ALI=y
+CONFIG_AGP_VIA=y
+
+# Legacy ISA Bus Support (GA-5AX has onboard ISA slots for legacy expansion cards)
+CONFIG_ISA=y
+CONFIG_ISAPNP=y
+
+# PATA/IDE Controller (ALi native + VIA MVP3 southbridge support for CompactFlash/IDE)
+CONFIG_ATA=y
+CONFIG_PATA_ALI=y
+CONFIG_PATA_VIA=y
+
+# Graphics Framebuffer (3dfx Voodoo 3, ATI Radeon 7000, NVIDIA GeForce 1/2/3, and console output)
+CONFIG_FB=y
+CONFIG_FB_3DFX=y
+CONFIG_FB_RADEON=y
+CONFIG_FB_NVIDIA=y
+CONFIG_FRAMEBUFFER_CONSOLE=y
+CONFIG_VGA_CONSOLE=y
+
+# Sound Configuration (Creative Sound Blaster Live! EMU10k1, native card; plus
+# onboard AC97 fallback for boards without a discrete card: ALi M5451 on
+# Aladdin V-era boards, VIA VT82C686-family AC97 on MVP3-era boards)
+CONFIG_SOUND=y
+CONFIG_SND=y
+CONFIG_SND_PCI=y
+CONFIG_SND_EMU10K1=y
+CONFIG_SND_ALI5451=y
+CONFIG_SND_VIA82XX=y
+
+# Networking Card Support (3Com 3c905-C and Realtek RTL8139/8139C+ Fast Ethernet PCI)
+CONFIG_NET_ETHERNET=y
+CONFIG_NET_VENDOR_3COM=y
+CONFIG_VORTEX=y
+CONFIG_NET_VENDOR_REALTEK=y
+CONFIG_8139TOO=y
+CONFIG_8139CP=y
+
+# Advanced Power Management (pre-ACPI era BIOS: needed for clean soft poweroff)
+CONFIG_APM=y
+
+# Legacy Floppy Disk Support (GA-5AX onboard floppy header)
+CONFIG_BLK_DEV_FD=y
+
+# Parallel Port Support (legacy printers/peripherals)
+CONFIG_PARPORT=y
+CONFIG_PARPORT_PC=y
+
+# Gameport/Joystick Support (Sound Blaster Live! game/MIDI port)
+CONFIG_GAMEPORT=y
+CONFIG_JOYSTICK_ANALOG=y

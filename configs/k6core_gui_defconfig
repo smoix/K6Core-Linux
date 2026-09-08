@@ -1,0 +1,98 @@
+# Target Architecture (AMD K6)
+BR2_i386=y
+BR2_x86_k6=y
+
+# C Library: musl instead of glibc. glibc >= 2.32 unconditionally requires
+# CMOV (i686+) on x86-32 regardless of -march, which the K6 does not have;
+# building against it produces a dynamic linker that SIGILLs on real K6
+# hardware the instant PID 1 execs. musl has no such floor.
+BR2_TOOLCHAIN_BUILDROOT_MUSL=y
+
+# Toolchain Kernel Headers (Matches Kernel 6.6 LTS)
+BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_6_6=y
+
+# C++ support (required by the modular X.org server, Fluxbox, and PCManFM/GTK2)
+BR2_TOOLCHAIN_BUILDROOT_CXX=y
+
+# System Configuration
+BR2_TARGET_GENERIC_HOSTNAME="k6core"
+BR2_TARGET_GENERIC_ISSUE="Welcome to K6Core Linux! (GUI)\n"
+BR2_TARGET_GENERIC_ROOT_PASSWD="k6core"
+BR2_TARGET_GENERIC_GETTY_PORT="tty1"
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
+
+# Post-Build and Post-Image scripts
+BR2_ROOTFS_POST_BUILD_SCRIPT="/workspace/board/k6core/post-build.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="/workspace/board/k6core/post-image.sh"
+BR2_ROOTFS_POST_SCRIPT_ARGS=""
+
+# Linux Kernel
+BR2_LINUX_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_VERSION=y
+BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE="6.6.84"
+BR2_LINUX_KERNEL_USE_ARCH_DEFAULT_CONFIG=y
+BR2_LINUX_KERNEL_ARCH_DEFAULT_CONFIG="i386"
+BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES="/workspace/board/k6core/linux.fragment"
+BR2_LINUX_KERNEL_INSTALL_TARGET=y
+BR2_LINUX_KERNEL_NEEDS_HOST_OPENSSL=y
+BR2_LINUX_KERNEL_NEEDS_HOST_LIBELF=y
+
+# Custom Packages & Target Shells
+BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+BR2_PACKAGE_ZSH=y
+BR2_PACKAGE_BASH=y
+BR2_PACKAGE_VIM=y
+BR2_PACKAGE_HTOP=y
+BR2_PACKAGE_LIBCURL=y
+BR2_PACKAGE_LIBCURL_CURL=y
+BR2_PACKAGE_DHCPCD=y
+BR2_PACKAGE_ALSA_UTILS=y
+BR2_PACKAGE_ALSA_UTILS_ALSAMIXER=y
+BR2_PACKAGE_ALSA_UTILS_AMIXER=y
+BR2_PACKAGE_PCIUTILS=y
+BR2_PACKAGE_USBUTILS=y
+BR2_PACKAGE_HDPARM=y
+BR2_PACKAGE_MPG123=y
+BR2_PACKAGE_DROPBEAR=y
+
+# X.org X Window System (modular server, for the separate xf86-video-tdfx driver)
+BR2_PACKAGE_XORG7=y
+BR2_PACKAGE_XSERVER_XORG_SERVER=y
+BR2_PACKAGE_XSERVER_XORG_SERVER_MODULAR=y
+BR2_PACKAGE_XAPP_XINIT=y
+
+# Graphics drivers: 3dfx Voodoo 3 native; fbdev as a generic fallback and as
+# the only path for both ATI Radeon 7000 and NVIDIA GeForce 1/2/3 (see
+# linux.fragment's CONFIG_FB_RADEON / CONFIG_FB_NVIDIA, bound to by fbdev).
+# No dedicated DDX is installed for either: xf86-video-ati requires
+# GBM/Mesa3D/DRM for no real benefit on this GPU generation, and
+# xf86-video-nv (2.1.22, its final upstream release, from 2013) calls
+# xf86DisableRandR(), an internal xorg-server API removed since server ABI
+# 1.20 -- it fails to load ("symbol not found") on any current xorg-server,
+# ours (21.1.16) included, with no config-level workaround.
+BR2_PACKAGE_XDRIVER_XF86_VIDEO_TDFX=y
+BR2_PACKAGE_XDRIVER_XF86_VIDEO_FBDEV=y
+
+# Input driver (evdev covers both USB and PS/2 uniformly via the kernel's
+# generic input subsystem -- no separate driver needed for legacy PS/2)
+BR2_PACKAGE_XDRIVER_XF86_INPUT_EVDEV=y
+
+# Desktop: Fluxbox window manager, PCManFM file manager, xterm terminal
+BR2_PACKAGE_FLUXBOX=y
+BR2_PACKAGE_PCMANFM=y
+BR2_PACKAGE_XTERM=y
+
+# Non-Journaled ext4 Root Filesystem
+BR2_TARGET_ROOTFS_EXT2=y
+BR2_TARGET_ROOTFS_EXT2_4=y
+BR2_TARGET_ROOTFS_EXT2_SIZE="3520M"
+BR2_TARGET_ROOTFS_EXT2_MKFS_OPTIONS="-O ^has_journal"
+# BR2_TARGET_ROOTFS_TAR is not set
+
+# Bootloader (GRUB2 legacy BIOS)
+BR2_TARGET_GRUB2=y
+BR2_TARGET_GRUB2_I386_PC=y
+BR2_TARGET_GRUB2_INSTALL_TOOLS=y
+
+# Host Utilities
+BR2_PACKAGE_HOST_GENIMAGE=y
