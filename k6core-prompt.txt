@@ -1,0 +1,97 @@
+Create a minimal, bootable Linux distribution for an AMD K6-2 450MHz system built on an ALi Aladdin V chipset motherboard (e.g. Gigabyte GA-5AX or Asus P5A), with VIA MVP3 chipset compatibility as well, compiled via Buildroot, and optimized to flash directly onto an 4GB CompactFlash (CF) card.
+
+1. Build & Caching Architecture
+- Configure a Dockerfile-based build environment using a stable Buildroot version (e.g., 2025.02.1) compiled inside a Linux container.
+- Build performance: Ensure the build script (build.sh) mounts a persistent Docker volume (k6core-build-cache mapped to /root/buildroot-output) to cache toolchain and build objects.
+- Toolchain Target Configuration:
+  - Target Architecture: i386
+  - Target Architecture Variant: k6 (This explicitly targets the AMD K6/K6-2/K6-3 instruction set, optimizing for MMX/3DNow! while strictly omitting the CMOV instruction).
+  - C Library: musl, NOT glibc (BR2_TOOLCHAIN_BUILDROOT_MUSL=y). glibc >= 2.32 unconditionally requires CMOV (i686+) on x86-32 regardless of -march, which the K6 does not have; building against it produces a dynamic linker that SIGILLs on real K6 hardware the instant PID 1 execs. musl has no such floor and must be used for both variants.
+- Path Conventions: Ensure all custom scripts and kernel configuration paths in the Buildroot defconfig are configured using absolute container paths pointing to the mounted /workspace directory (e.g., /workspace/board/k6core/...) to allow robust out-of-tree compilations.
+- Variants: Support a "headless" (console-only) and a "gui" (X11 desktop, real hardware) image from a SINGLE parameterized build script (build.sh [headless|gui]) rather than duplicating the script — both variants share the same Dockerfile/builder image and the same board/k6core/ scripts, and differ only in defconfig file, Docker cache volume name (k6core-build-cache / k6core-gui-build-cache), and output image filename (disk.img / disk-gui.img).
+
+2. Disk & Partitioning Requirements
+- Output a raw MBR disk image (disk.img) optimized for a 4GB CompactFlash card acting as an IDE fixed disk.
+- Limit total image size to exactly 3,699,999,744 bytes (~3.7GB decimal, i.e. a 1MB-aligned root partition of 3,698,951,168 bytes) to guarantee it safely fits the physical geometry constraints of various 4GB CF cards.
+- Partition layout: A legacy MBR (Master Boot Record) partition table with a single, active/bootable primary EXT4 partition utilizing the remaining space.
+- Write-reduction & Wear Leveling:
+  - Format the root partition as a non-journaled EXT4 filesystem (mkfs.ext4 option "-O ^has_journal") to eliminate the write wear penalty on flash media while retaining extents.
+  - Align both the start (Sector 2048 / 1MB offset) and the end of the partition to a clean 1MB sector grid to protect flash erase-block boundaries.
+  - Mount with "noatime,nodiratime,commit=60" in /etc/fstab to prevent read access-time writes and batch dirty pages.
+
+3. Legacy Bootloader (GRUB2 BIOS)
+- Configure GRUB2 for the legacy BIOS platform (BR2_TARGET_GRUB2_I386_PC=y).
+- The build system must install GRUB2 directly into the MBR sector of disk.img, leaving the partition table preserved (using genimage "holes = {'(440; 512)'}" parameter).
+- System kernel parameters:
+  "root=/dev/sda1 rootwait rw console=tty1 net.ifnames=0" (net.ifnames=0 keeps the classic eth0 name instead of a predictable-name like enp2s0, matching the eth0 DHCP config below).
+
+4. Linux Kernel & Hardware-Specific Drivers
+- Use Linux kernel version 6.6.x (LTS) — pin to 6.6.84 specifically for build reproducibility.
+- Force the kernel processor family optimization to AMD K6/K6-II/K6-III (CONFIG_MK6=y).
+- Disable KASLR (# CONFIG_RANDOMIZE_BASE is not set): it is known to hang silently on some vintage real BIOS/hardware (unreliable e820 maps, no RDRAND) even though it works fine under emulation — this only surfaces on real hardware, not in QEMU/VM testing.
+- HARDWARE CHIPSET & BUS DRIVERS (ALi Aladdin V and VIA MVP3):
+  - CONFIG_PCI=y
+  - CONFIG_AGP=y
+  - CONFIG_AGP_ALI=y
+  - CONFIG_AGP_VIA=y (VIA MVP3/Apollo Pro AGP chipset support)
+  - CONFIG_ATA=y
+  - CONFIG_PATA_ALI=y (Native ALi IDE controller support for optimized CF card I/O)
+  - CONFIG_PATA_VIA=y (VIA MVP3 southbridge PATA/IDE controller support)
+  - CONFIG_ISA=y (Legacy ISA bus support for the GA-5AX's onboard ISA expansion slots)
+  - CONFIG_ISAPNP=y (Auto-detection of ISA Plug and Play expansion cards)
+- NATIVE GRAPHICS (3dfx Voodoo 3, ATI Radeon 7000, NVIDIA GeForce 1/2/3):
+  - CONFIG_FB=y
+  - CONFIG_FB_3DFX=y (Native tdfxfb driver for the Voodoo 3 graphics core)
+  - CONFIG_FB_RADEON=y (Native radeonfb driver for the Radeon 7000 graphics core)
+  - CONFIG_FB_NVIDIA=y (Native nvidiafb driver for the GeForce 1/2/3 graphics core)
+  - CONFIG_FRAMEBUFFER_CONSOLE=y
+  - CONFIG_VGA_CONSOLE=y
+- NATIVE AUDIO (Creative Sound Blaster Live!):
+  - CONFIG_SOUND=y
+  - CONFIG_SND=y
+  - CONFIG_SND_PCI=y
+  - CONFIG_SND_EMU10K1=y (Native ALSA driver for the EMU10k1 chip)
+  - CONFIG_SND_ALI5451=y (Onboard AC97 fallback: ALi M5451 companion audio chip on Aladdin V-era boards)
+  - CONFIG_SND_VIA82XX=y (Onboard AC97 fallback: VIA VT82C686-family audio on MVP3-era boards)
+- NATIVE NETWORKING (3Com 3c905-C and Realtek RTL8139/8139C+):
+  - CONFIG_NET_ETHERNET=y
+  - CONFIG_NET_VENDOR_3COM=y
+  - CONFIG_3C59X=y (Native Vortex/Boomerang driver for the Fast EtherLink XL PCI card)
+  - CONFIG_NET_VENDOR_REALTEK=y
+  - CONFIG_8139TOO=y (RTL8129/8130/8139 Fast Ethernet PCI adapter support)
+  - CONFIG_8139CP=y (RTL8139C+ Fast Ethernet PCI adapter support)
+- LEGACY PERIPHERAL & POWER MANAGEMENT SUPPORT:
+  - CONFIG_APM=y (Advanced Power Management for clean soft poweroff on this pre-ACPI-era BIOS)
+  - CONFIG_BLK_DEV_FD=y (Floppy disk support for the onboard floppy header)
+  - CONFIG_PARPORT=y & CONFIG_PARPORT_PC=y (Parallel port support for legacy printers/peripherals)
+  - CONFIG_GAMEPORT=y & CONFIG_JOYSTICK_ANALOG=y (Game/MIDI port support via the Sound Blaster Live!)
+- SYSTEM MEMORY TWEAK:
+  - Explicitly configure standard 32-bit low memory mapping (CONFIG_NOHIGHMEM=y) since the physical 512MB RAM fits completely below the 896MB kernel memory split.
+
+5. OS Packages, Login Shells, & Networking
+- Buildroot Configuration:
+  - Enable BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y to allow standard GNU package options.
+  - Compile and install: zsh, bash, vim, htop, dhcpcd, and alsa-utils (for configuring the Sound Blaster card via alsamixer).
+  - Also install: pciutils (lspci hardware diagnostics), usbutils (lsusb hardware diagnostics), hdparm (CF card benchmarking/tuning), mpg123 (MP3 playback via the Sound Blaster Live!), and dropbear (lightweight SSH server, starts automatically at boot, for remote root login/diagnostics without a monitor/keyboard attached).
+  - Enable the alsa-utils amixer sub-option (BR2_PACKAGE_ALSA_UTILS_AMIXER=y) in addition to alsamixer.
+  - Note: Enable "curl" by configuring libcurl (BR2_PACKAGE_LIBCURL=y) and selecting the curl command line utility sub-option (BR2_PACKAGE_LIBCURL_CURL=y) to avoid deprecated legacy package checks.
+  - Target system hostname: k6core
+  - Login banner: "Welcome to K6Core Linux!"
+  - Root password: k6core
+  - Configure the Getty login daemon to run on standard local virtual console tty1.
+- Post-Build Script Customizations:
+  - Ensure the scripts dynamically locate their own directories using "$(dirname "$0")" to prevent path conflicts.
+  - Edit /etc/passwd to change the root user's default login shell to /bin/zsh.
+  - Append /bin/zsh to /etc/shells.
+  - Configure eth0 network interface to run DHCP (dhcpcd) automatically at boot via /etc/network/interfaces.
+  - Install a BusyBox init script (S45alsa) that runs "alsactl restore" on boot (falling back to unmuting all mixer controls to 80% via amixer if no saved state exists yet) and "alsactl store" on shutdown/reboot, so ALSA mixer levels persist across reboots in /var/lib/alsa/asound.state.
+  - If a "/workspace/sample" directory exists, copy its contents into /root/sample on the target filesystem (e.g. for sample media to test mpg123/ALSA playback).
+  - If the target filesystem contains /usr/bin/Xorg (i.e. a gui variant), also install root's ~/.xinitrc (running "exec startfluxbox") so "startx" launches straight into the desktop, plus /etc/X11/xorg.conf — no driver is pinned, so Xorg autoprobes whichever supported card (Voodoo 3, Radeon 7000, or GeForce 1/2/3) is actually installed. Also remove /etc/init.d/S40xorg, which Buildroot's xserver_xorg-server package auto-installs whenever neither nodm nor xdm is enabled: it launches a bare Xorg at boot bypassing .xinitrc entirely (no window manager, unusable blank screen), so it must be deleted to keep "startx" as the only way X starts.
+
+6. Optional GUI Variant (X11 Desktop)
+- Toolchain: Enable C++ support (BR2_TOOLCHAIN_BUILDROOT_CXX=y), required by the modular X.org server, Fluxbox, and PCManFM/GTK2.
+- X.Org: Enable the X Window System (BR2_PACKAGE_XORG7=y) with the modular server variant (BR2_PACKAGE_XSERVER_XORG_SERVER_MODULAR=y), since the graphics driver ships as a separate package from the server. Enable xinit (BR2_PACKAGE_XAPP_XINIT=y).
+- Graphics drivers: Enable the native 3dfx Voodoo 3 driver (BR2_PACKAGE_XDRIVER_XF86_VIDEO_TDFX=y), with the generic framebuffer driver (BR2_PACKAGE_XDRIVER_XF86_VIDEO_FBDEV=y) as a fallback and as the only driver for both ATI Radeon 7000 and NVIDIA GeForce 1/2/3 (binds to the kernel's CONFIG_FB_RADEON / CONFIG_FB_NVIDIA devices). No dedicated DDX is used for either: xf86-video-ati requires GBM/Mesa3D/DRM for no real benefit on this GPU generation, and xf86-video-nv (2.1.22, final upstream release, 2013) calls xf86DisableRandR(), an internal xorg-server API removed since server ABI 1.20 — it fails to load on any current xorg-server, with no config-level fix. xorg.conf's Module section must preload fbdevhw, vgahw, int10, exa, shadow, and shadowfb — helper modules that tdfx/fbdev need resolvable at load time (RTLD_NOW), which the driver .so files reference as undefined symbols without linking directly against them.
+- Input driver: Enable xf86-input-evdev, which covers both USB and PS/2 devices uniformly via the kernel's generic input subsystem.
+- Desktop environment: Prefer Fluxbox (BR2_PACKAGE_FLUXBOX=y) as the window manager over LXDE (whose lxpanel/lxsession/lxappearance components are not available as Buildroot packages) and over plain Openbox (which needs a separate panel package for a taskbar) — Fluxbox bundles its own toolbar/workspace-switcher and is lighter than a GTK-based desktop, which matters on a 450MHz K6-2. Include PCManFM (BR2_PACKAGE_PCMANFM=y) as the file manager and xterm (BR2_PACKAGE_XTERM=y) as the terminal.
+- xterm version: Patch the Dockerfile to bump Buildroot's pinned xterm from 389 to 411 (sed the version in package/xterm/xterm.mk plus a matching xterm.hash). 389 has a known musl-libc bug where its manual posix_openpt()/grantpt()/unlockpt() pty setup fails at runtime with "open ttydev: I/O error" (Gentoo bug 689080) -- upstream fixed it in patch #391 by switching to the plain openpty() call musl already supports correctly. This is unrelated to and independent of any xorg.conf/driver configuration.

@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Restore saved ALSA mixer levels on boot (or unmute everything to a sane
+# default if no saved state exists yet), and save the current levels back
+# on shutdown so volume/unmute changes persist across reboots.
+
+STATE_DIR=/var/lib/alsa
+STATE_FILE="${STATE_DIR}/asound.state"
+
+case "$1" in
+  start)
+	mkdir -p "$STATE_DIR"
+	if [ -s "$STATE_FILE" ]; then
+		echo "Restoring saved ALSA mixer levels..."
+		alsactl restore
+	else
+		echo "No saved ALSA mixer state found, unmuting all controls to 80%..."
+		amixer scontrols | sed -n "s/.*'\(.*\)'.*/\1/p" | while read -r ctl; do
+			amixer -q sset "$ctl" unmute 80% 2>/dev/null
+		done
+		alsactl store
+	fi
+	;;
+  stop)
+	echo "Saving ALSA mixer levels..."
+	alsactl store
+	;;
+  *)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+	;;
+esac
