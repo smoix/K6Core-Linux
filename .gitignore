@@ -8,3 +8,9 @@ disk-gui.img
 
 # Local Claude Code settings (machine-specific)
 .claude/settings.local.json
+
+# Claude Code project instructions (not part of the published project)
+CLAUDE.md
+
+# Test media (copyrighted, not part of the published project)
+*.mp3
