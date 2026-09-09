@@ -1,12 +1,12 @@
 # K6Core Linux: Minimal Distribution for AMD K6-2
 
-**K6Core** is a highly optimized, minimal, bootable Linux distribution designed specifically for an **AMD K6-2 450MHz** processor running on an **ALi Aladdin V** chipset motherboard — e.g. a **Gigabyte GA-5AX** or **Asus P5A** — with compatibility for VIA MVP3 chipset boards as well. It is built completely from source using **Buildroot 2025.02.1** in a Docker-based compilation environment.
+**K6Core** is a highly optimized, minimal, bootable Linux distribution designed specifically for an **AMD K6 and up** processor running on an **ALi Aladdin V** chipset motherboard — e.g. a **Gigabyte GA-5AX** or **Asus P5A** — with compatibility for VIA MVP3 chipset boards as well. It is built completely from source using **Buildroot 2025.02.1** in a Docker-based compilation environment.
 
 ---
 
 ## 1. Hardware-Specific Drivers & Optimizations
 
-* **CPU Support (`-march=k6` / `CONFIG_MK6=y`)**: Targets the AMD K6 family, optimizing for MMX and 3DNow! instruction sets while strictly omitting the `CMOV` instruction (which is unsupported by the K6 line).
+* **CPU Support (`-march=k6` / `CONFIG_MK6=y`)**: Targets the base AMD K6 instruction set — i586 baseline plus MMX — while strictly omitting the `CMOV` instruction (unsupported across the entire K6 line, up to and including K6-III+) and not emitting 3DNow! (that would require `-march=k6-2`/`k6-3` instead). Since 3DNow! is simply unused rather than actively avoided, the resulting binaries run correctly on every K6-family CPU: the original K6 and K6 "Little Foot", K6-2 and K6-2+, and K6-III and K6-III+.
 * **System Memory Layout (`CONFIG_NOHIGHMEM=y`)**: Configures a flat 32-bit low memory layout since the 512MB RAM of the system fits entirely below the kernel's 896MB high memory split. This optimizes kernel memory mappings.
 * **ALi Aladdin V Chipset**:
   * `CONFIG_PCI=y` (PCI bus support)
