@@ -1,0 +1,1 @@
+Files added in this folder will be in /root/sample in the generated image.
