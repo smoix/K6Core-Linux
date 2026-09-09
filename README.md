@@ -1,4 +1,4 @@
-# K6Core Linux: Minimal Distribution for AMD K6-2
+# K6Core Linux: Minimal Distribution for AMD K6 CPUs
 
 **K6Core** is a highly optimized, minimal, bootable Linux distribution designed specifically for an **AMD K6 and up** processor running on an **ALi Aladdin V** chipset motherboard — e.g. a **Gigabyte GA-5AX** or **Asus P5A** — with compatibility for VIA MVP3 chipset boards as well. It is built completely from source using **Buildroot 2025.02.1** in a Docker-based compilation environment.
 
