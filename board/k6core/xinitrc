@@ -1,2 +1,3 @@
 #!/bin/sh
+feh --bg-fill /usr/share/pixmaps/k6core-default.png
 exec startfluxbox

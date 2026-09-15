@@ -89,6 +89,34 @@ if [ -f "${TARGET_DIR}/usr/bin/Xorg" ]; then
         echo "Removing auto-start S40xorg init script (X must be started manually via startx)..."
         rm -f "${TARGET_DIR}/etc/init.d/S40xorg"
     fi
+
+    # Desktop wallpaper (set by .xinitrc via feh), a nicer default Fluxbox
+    # style (it ships ~30 of its own, but defaults to the plain "bloe" one),
+    # a curated menu (the stock one has a dead "firefox" stub -- we don't
+    # ship Firefox -- and never lists dillo/leafpad), and a style overlay
+    # that stops the style's own background: directive from repainting over
+    # feh's wallpaper on every startup (RootTheme.cc calls fbsetbg with the
+    # style's background unconditionally unless an overlay says otherwise).
+    #
+    # session.menuFile/styleOverlay point at absolute /usr/share/fluxbox/...
+    # paths rather than the ~/.fluxbox/... ones Fluxbox's own init template
+    # uses by default, so there's no dependency on undocumented first-run
+    # copy-to-homedir behavior -- these files are just read directly.
+    if [ -f "${TARGET_DIR}/usr/bin/fluxbox" ]; then
+        echo "Installing desktop wallpaper, Fluxbox style/menu/overlay..."
+        mkdir -p "${TARGET_DIR}/usr/share/pixmaps"
+        cp -f "${BOARD_DIR}/k6core-default.png" "${TARGET_DIR}/usr/share/pixmaps/k6core-default.png"
+        cp -f "${BOARD_DIR}/fluxbox-menu" "${TARGET_DIR}/usr/share/fluxbox/menu"
+        cp -f "${BOARD_DIR}/fluxbox-overlay" "${TARGET_DIR}/usr/share/fluxbox/overlay"
+        if [ -f "${TARGET_DIR}/usr/share/fluxbox/init" ]; then
+            sed -i \
+                -e 's|^session\.menuFile:.*|session.menuFile:\t/usr/share/fluxbox/menu|' \
+                -e 's|^session\.styleFile:.*|session.styleFile:\t/usr/share/fluxbox/styles/zimek_darkblue|' \
+                -e '/^session\.styleFile:/a\
+session.styleOverlay:\t/usr/share/fluxbox/overlay' \
+                "${TARGET_DIR}/usr/share/fluxbox/init"
+        fi
+    fi
 fi
 
 # 8. Copy GRUB 1st stage boot.img to binaries directory (required for genimage)

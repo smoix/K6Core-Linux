@@ -31,6 +31,13 @@ CONFIG_FB_NVIDIA=y
 CONFIG_FRAMEBUFFER_CONSOLE=y
 CONFIG_VGA_CONSOLE=y
 
+# DDC/I2C monitor detection: without it, none of the three drivers above can
+# ask the display for its native mode, so they all fall back to a hardcoded
+# 640x480@60 8bpp default (confirmed from tdfxfb.c's mode_option fallback).
+# FB_3DFX_I2C and FB_RADEON_I2C already default to y in their own Kconfig
+# entries; only NVIDIA needs an explicit enable here.
+CONFIG_FB_NVIDIA_I2C=y
+
 # Sound Configuration (Creative Sound Blaster Live! EMU10k1, native card; plus
 # onboard AC97 fallback for boards without a discrete card: ALi M5451 on
 # Aladdin V-era boards, VIA VT82C686-family AC97 on MVP3-era boards)

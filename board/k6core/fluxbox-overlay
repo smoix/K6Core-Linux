@@ -1,0 +1,4 @@
+! Prevent the selected style's own background: directive (RootTheme.cc calls
+! fbsetbg to paint it on every startup) from overwriting the wallpaper feh
+! sets from .xinitrc.
+background: none

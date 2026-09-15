@@ -82,6 +82,25 @@ BR2_PACKAGE_FLUXBOX=y
 BR2_PACKAGE_PCMANFM=y
 BR2_PACKAGE_XTERM=y
 
+# DejaVu: the only scalable (TrueType) fonts on the system without this --
+# everything else installed is legacy X11 bitmap fonts (.pcf, 1990s X11 misc
+# collection). Xft/Fluxbox limps along on a bitmap-font fallback without a
+# real font, but Pango/GTK2 (Leafpad, PCManFM) handles that far more
+# fragilely -- this is what was causing Leafpad's blank window.
+BR2_PACKAGE_DEJAVU=y
+
+# Leafpad (GTK2 text editor, same toolkit tier as PCManFM) and Dillo (web
+# browser on its own tiny FLTK toolkit, not GTK -- renders old-school
+# HTML/CSS only, no JS, which is the only class of browser actually usable
+# on this hardware).
+BR2_PACKAGE_LEAFPAD=y
+BR2_PACKAGE_DILLO=y
+
+# feh: sets the desktop wallpaper (board/k6core/k6core-default.png) from
+# .xinitrc before Fluxbox starts. Pure X11/imlib2, no GTK/dbus, so it doesn't
+# reintroduce the weight of the LXDE stack this project moved away from.
+BR2_PACKAGE_FEH=y
+
 # Non-Journaled ext4 Root Filesystem
 BR2_TARGET_ROOTFS_EXT2=y
 BR2_TARGET_ROOTFS_EXT2_4=y
