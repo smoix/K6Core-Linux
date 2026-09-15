@@ -1,17 +1,25 @@
 # K6Core Linux: Minimal Distribution for AMD K6 CPUs
 
-**K6Core** is a highly optimized, minimal, bootable Linux distribution designed specifically for an **AMD K6 and up** processor running on an **ALi Aladdin V** chipset motherboard — e.g. a **Gigabyte GA-5AX** or **Asus P5A** — with compatibility for VIA MVP3 chipset boards as well. It is built completely from source using **Buildroot 2025.02.1** in a Docker-based compilation environment.
+**K6Core** is an optimized and (rather) minimal, Linux distribution designed specifically for an **AMD K6 and up** processor running on an **ALi Aladdin V** chipset motherboard — e.g. a **Gigabyte GA-5AX** or **Asus P5A** — with compatibility for VIA MVP3 chipset boards as well. It is built completely from source using **Buildroot 2025.02.1** in a Docker-based compilation environment. Pre-built images are also available.
 
 > [!IMPORTANT]
 > **Default login**: `root` / `k6core` — on the local console (`tty1`) or over SSH (`dropbear` starts automatically; the board gets its address via DHCP on `eth0`).
 
 ---
 
+## Table of Contents
+1. [Hardware-Specific Drivers & Optimizations](#1-hardware-specific-drivers--optimizations)
+2. [OS Details & Packages](#2-os-details--packages)
+3. [Build Instructions](#3-build-instructions)
+4. [Flashing Guide](#4-flashing-guide)
+5. [Disk Sizing, Alignment, and Write-Reduction](#5-disk-sizing-alignment-and-write-reduction)
+6. [Build & Caching Architecture](#6-build--caching-architecture)
+
+---
+
 ## 1. Hardware-Specific Drivers & Optimizations
 
-* **CPU Support (`-march=k6` / `CONFIG_MK6=y`)**: Targets the base AMD K6 instruction set — i586 baseline plus MMX — while strictly omitting the `CMOV` instruction (unsupported across the entire K6 line, up to and including K6-III+) and not emitting 3DNow! (that would require `-march=k6-2`/`k6-3` instead). Since 3DNow! is simply unused rather than actively avoided, the resulting binaries run correctly on every K6-family CPU: the original K6 and K6 "Little Foot", K6-2 and K6-2+, and K6-III and K6-III+.
-  > [!NOTE]
-  > This instruction-set target (i586 + MMX, no CMOV, no SSE) isn't actually AMD-specific — it should also run on a genuine Intel **Pentium MMX (P55C)**. This was confirmed by booting this project's image under QEMU with the `pentium,+mmx` CPU model, which matches that exact profile and showed no illegal-instruction crashes anywhere in the stack.
+* **CPU Support (`-march=k6` / `CONFIG_MK6=y`)**: Targets the base AMD K6 instruction set — i586 baseline plus MMX — while strictly omitting the `CMOV` instruction (unsupported across the entire K6 line, up to and including K6-III+) and not emitting 3DNow! (that would require `-march=k6-2`/`k6-3` instead). Since 3DNow! is simply unused rather than actively avoided, the resulting binaries run correctly on every K6-family CPU: the original K6 and K6 "Little Foot", K6-2 and K6-2+, and K6-III and K6-III+. This instruction-set target isn't actually AMD-specific — it should also run on a genuine Intel **Pentium MMX (P55C)**.
 * **System Memory Layout (`CONFIG_NOHIGHMEM=y`)**: Configures a flat 32-bit low memory layout since the 512MB RAM of the system fits entirely below the kernel's 896MB high memory split. This optimizes kernel memory mappings.
 * **ALi Aladdin V Chipset**:
   * `CONFIG_PCI=y` (PCI bus support)
@@ -29,26 +37,17 @@
 
 ---
 
-## 2. Disk Sizing, Alignment, and Write-Reduction
+## 2. OS Details & Packages
 
-* **3.7GB Disk Image Constraint**: Physical "4GB" CompactFlash cards vary slightly in their exact sector count depending on manufacturer tolerances. To guarantee that `disk.img` safely fits *any* 4GB CF card, the image size is strictly limited to exactly **3,699,999,744 bytes (~3.7GB decimal)**.
-* **1MB Alignment (Sector 2048)**: Aligns the primary root partition at a 1MB boundary. This alignment protects the underlying flash memory cells from write amplification caused by partition-to-flash-erase-block misalignment.
-* **Non-Journaled EXT4**: Disables the journal (`-O ^has_journal`) while retaining EXT4's modern extents, fast multi-block allocator, and speedy fsck. This completely eliminates the double-write wear penalty of journaling filesystems, dramatically extending the life of your CompactFlash card.
-* **Flash-Friendly Mount Options**: Mounts the filesystem with `noatime,nodiratime` to prevent write wear when reading files, and uses `commit=60` to cache writes and flush them every 60 seconds.
-
----
-
-## 3. Build & Caching Architecture
-
-The compilation is performed inside a lightweight Ubuntu-based Docker container. This guarantees build reproducibility and eliminates dependency conflicts on macOS.
-
-* **Out-of-Tree Builds (`make O=...`)**: Buildroot remains clean and unmodified in `/buildroot` while all compilation objects, cache files, and configurations are written to `/root/buildroot-output`.
-* **Persistent Docker Cache Volume**: A Docker volume (`k6core-build-cache` for the headless variant, `k6core-gui-build-cache` for the GUI variant — see below) is mapped to `/root/buildroot-output`. This volume caches the entire compiler toolchain and compilation objects across runs, reducing subsequent build times to under 30 seconds.
-* **Two Variants, One Script**: `build.sh` is parameterized by variant rather than duplicated. Both variants share the same `Dockerfile`/builder image and the same `board/k6core/` scripts — only the Buildroot `defconfig`, the cache volume, and the output image filename differ. This keeps driver/config changes (like everything in section 1) from drifting out of sync between variants.
+* **Default Shell**: `zsh` for user `root`
+* **Networking**: Runs `dhcpcd` automatically on `eth0` at boot.
+* **Pre-installed Packages**: `zsh`, `bash`, `vim`, `htop`, `curl`, `dhcpcd`, `alsa-utils` (providing `alsamixer`/`amixer` to configure your Sound Blaster Live! card), `pciutils` (`lspci`), `usbutils` (`lsusb`), `hdparm` (CF card benchmarking/tuning), and `mpg123` (MP3 playback).
+* **Persistent ALSA Mixer State**: The `S45alsa` init script unmutes all mixer controls to a sane 80% on first boot (no saved state yet) and restores your saved levels on every subsequent boot via `alsactl restore`. Any changes you make with `alsamixer`/`amixer` are saved to `/var/lib/alsa/asound.state` on clean shutdown/reboot via `alsactl store`, so `mpg123 file.mp3` should just work without you needing to unmute anything by hand after the first boot.
+* **Sample Media**: If a `sample/` directory exists at the repo root, its contents are copied into `/root/sample` on the target filesystem during the build — a convenient place to drop an MP3 for testing `mpg123`/ALSA playback.
 
 ---
 
-## 4. Build Instructions
+## 3. Build Instructions
 
 ### Prerequisites
 * Docker Desktop installed and running.
@@ -67,6 +66,7 @@ This script will:
 
 ### GUI Variant Details
 `configs/k6core_gui_defconfig` builds on top of the headless config and adds:
+* **No auto-start**: You need to run `startx` manually in order to have a GUI, easier if you have to debug something.
 * **X.Org (modular server)**: `BR2_PACKAGE_XSERVER_XORG_SERVER_MODULAR=y`, needed because graphics drivers are separate packages from the server.
 * **Supported graphics cards**: 3dfx Voodoo 3 gets a native 2D driver (`xf86-video-tdfx`). ATI Radeon 7000 and NVIDIA GeForce 1/2/3 have no dedicated driver installed — `xf86-video-ati` requires GBM/Mesa3D/DRM for no real benefit on a GPU this old, and `xf86-video-nv` (2.1.22, its final upstream release, from 2013) calls `xf86DisableRandR()`, an internal xorg-server API removed since server ABI 1.20, so it fails to load ("symbol not found") on any current xorg-server with no config-level fix. Both instead rely on the kernel's `CONFIG_FB_RADEON`/`CONFIG_FB_NVIDIA` framebuffer drivers plus the generic `xf86-video-fbdev` DDX, which also serves as the catch-all fallback for the Voodoo 3. `/etc/X11/xorg.conf` (installed by `post-build.sh` only when `Xorg` is detected in the target) leaves the driver unset so Xorg autoprobes whichever card is actually installed, and its `Module` section preloads the helper modules (`fbdevhw`, `vgahw`, `int10`, `exa`, `shadow`, `shadowfb`) that `tdfx`/`fbdev` need at load time.
 * **Input driver**: `xf86-input-evdev`, which covers both USB and PS/2 devices uniformly via the kernel's generic input subsystem.
@@ -74,26 +74,10 @@ This script will:
 * **Fluxbox** as the window manager: it bundles its own toolbar/workspace-switcher, so it needs no separate panel package, and is much lighter than a full GTK-based desktop stack — which matters on a slow K6.
 * **PCManFM** as the file manager, **xterm** as the terminal, **Dillo** as the web browser (its own tiny FLTK toolkit, not GTK — renders old-school HTML/CSS only, no JS, which is the only class of browser actually usable on this hardware), and **Leafpad** as a GTK2 text editor. xterm is bumped to version 411 via a `Dockerfile` patch to Buildroot's own package recipe, since the pinned 389 has a musl-libc bug (its manual `posix_openpt`/`grantpt`/`unlockpt` pty setup fails with "open ttydev: I/O error" — [Gentoo bug 689080](https://bugs.gentoo.org/689080)), fixed upstream in patch #391.
 * **DejaVu** TrueType fonts. Without them, the only fonts on the system are legacy X11 bitmap fonts (`.pcf`, the 1990s X11 "misc" collection) — Xft/Fluxbox tolerates that via a bitmap-font fallback, but GTK2/Pango (Leafpad, PCManFM) handles it far more fragilely, to the point of rendering a blank window.
-* **Desktop wallpaper and style**: `feh --bg-fill` (pure X11/imlib2, no GTK/dbus) sets `board/k6core/k6core-default.png` as the background from `.xinitrc` before Fluxbox starts. Fluxbox itself ships around 30 built-in styles but defaults to the plain "bloe" one; `post-build.sh` switches the system-wide init template (which `~/.fluxbox/init` is generated from on first run) to `zimek_darkblue` instead. That same init template also points `session.styleOverlay` at a style overlay (`background: none`) — without it, Fluxbox's `RootTheme.cc` unconditionally repaints the root window from the style's own `background:` directive on every startup, wiping out the wallpaper feh just set.
-* **Curated Fluxbox menu**: the stock menu Fluxbox generates at build time has a dead `[exec] (firefox) {}` stub (empty command — Firefox was never installed) and never lists Dillo/Leafpad. `post-build.sh` installs a corrected copy instead, and points `session.menuFile` at it explicitly rather than relying on Fluxbox's undocumented per-user fallback path.
-* Root's `.xinitrc` runs `feh --bg-fill ...` then `exec startfluxbox`, so after logging in on `tty1`, `startx` launches straight into a themed desktop.
-* **No auto-start**: Buildroot's `xserver_xorg-server` package auto-installs an `/etc/init.d/S40xorg` script whenever neither `nodm` nor `xdm` is enabled, launching a bare `Xorg` at boot that bypasses `.xinitrc` entirely (no window manager, just an unusable blank screen). `post-build.sh` deletes it, so logging in on `tty1` and running `startx` manually is the only way X starts.
 
 ---
 
-## 5. OS Details & Packages
-
-* **Hostname**: `k6core`
-* **Default Shell**: `zsh` for user `root` (configured via `/etc/passwd` and `/etc/shells`)
-* **Default Banner**: `Welcome to K6Core Linux!`
-* **DHCP Networking**: Runs `dhcpcd` automatically on `eth0` at boot.
-* **Pre-installed Packages**: `zsh`, `bash`, `vim`, `htop`, `curl`, `dhcpcd`, `alsa-utils` (providing `alsamixer`/`amixer` to configure your Sound Blaster Live! card), `pciutils` (`lspci`), `usbutils` (`lsusb`), `hdparm` (CF card benchmarking/tuning), and `mpg123` (MP3 playback).
-* **Persistent ALSA Mixer State**: The `S45alsa` init script unmutes all mixer controls to a sane 80% on first boot (no saved state yet) and restores your saved levels on every subsequent boot via `alsactl restore`. Any changes you make with `alsamixer`/`amixer` are saved to `/var/lib/alsa/asound.state` on clean shutdown/reboot via `alsactl store`, so `mpg123 file.mp3` should just work without you needing to unmute anything by hand after the first boot.
-* **Sample Media**: If a `sample/` directory exists at the repo root, its contents are copied into `/root/sample` on the target filesystem during the build — a convenient place to drop an MP3 for testing `mpg123`/ALSA playback.
-
----
-
-## 6. Flashing Guide
+## 4. Flashing Guide
 
 ### macOS
 
@@ -150,3 +134,22 @@ Click **Flash!**. Enter your administrator password if prompted (required to wri
 Once Etcher reports success, eject the CF card through your OS's normal "safely remove"/"eject" action before unplugging it.
 
 Your CompactFlash card is now bootable and ready to be plugged into your AMD K6 PC!
+
+---
+
+## 5. Disk Sizing, Alignment, and Write-Reduction
+
+* **3.7GB Disk Image Constraint**: Physical "4GB" CompactFlash cards vary slightly in their exact sector count depending on manufacturer tolerances. To guarantee that `disk.img` safely fits *any* 4GB CF card, the image size is strictly limited to exactly **3,699,999,744 bytes (~3.7GB decimal)**.
+* **1MB Alignment (Sector 2048)**: Aligns the primary root partition at a 1MB boundary. This alignment protects the underlying flash memory cells from write amplification caused by partition-to-flash-erase-block misalignment.
+* **Non-Journaled EXT4**: Disables the journal (`-O ^has_journal`) while retaining EXT4's modern extents, fast multi-block allocator, and speedy fsck. This completely eliminates the double-write wear penalty of journaling filesystems, dramatically extending the life of your CompactFlash card.
+* **Flash-Friendly Mount Options**: Mounts the filesystem with `noatime,nodiratime` to prevent write wear when reading files, and uses `commit=60` to cache writes and flush them every 60 seconds.
+
+---
+
+## 6. Build & Caching Architecture
+
+The compilation is performed inside a lightweight Ubuntu-based Docker container. This guarantees build reproducibility and eliminates dependency conflicts on macOS.
+
+* **Out-of-Tree Builds (`make O=...`)**: Buildroot remains clean and unmodified in `/buildroot` while all compilation objects, cache files, and configurations are written to `/root/buildroot-output`.
+* **Persistent Docker Cache Volume**: A Docker volume (`k6core-build-cache` for the headless variant, `k6core-gui-build-cache` for the GUI variant — see below) is mapped to `/root/buildroot-output`. This volume caches the entire compiler toolchain and compilation objects across runs, reducing subsequent build times to under 30 seconds.
+* **Two Variants, One Script**: `build.sh` is parameterized by variant rather than duplicated. Both variants share the same `Dockerfile`/builder image and the same `board/k6core/` scripts — only the Buildroot `defconfig`, the cache volume, and the output image filename differ. This keeps driver/config changes (like everything in section 1) from drifting out of sync between variants.
