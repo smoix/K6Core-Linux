@@ -2,11 +2,16 @@
 
 **K6Core** is a highly optimized, minimal, bootable Linux distribution designed specifically for an **AMD K6 and up** processor running on an **ALi Aladdin V** chipset motherboard — e.g. a **Gigabyte GA-5AX** or **Asus P5A** — with compatibility for VIA MVP3 chipset boards as well. It is built completely from source using **Buildroot 2025.02.1** in a Docker-based compilation environment.
 
+> [!IMPORTANT]
+> **Default login**: `root` / `k6core` — on the local console (`tty1`) or over SSH (`dropbear` starts automatically; the board gets its address via DHCP on `eth0`).
+
 ---
 
 ## 1. Hardware-Specific Drivers & Optimizations
 
 * **CPU Support (`-march=k6` / `CONFIG_MK6=y`)**: Targets the base AMD K6 instruction set — i586 baseline plus MMX — while strictly omitting the `CMOV` instruction (unsupported across the entire K6 line, up to and including K6-III+) and not emitting 3DNow! (that would require `-march=k6-2`/`k6-3` instead). Since 3DNow! is simply unused rather than actively avoided, the resulting binaries run correctly on every K6-family CPU: the original K6 and K6 "Little Foot", K6-2 and K6-2+, and K6-III and K6-III+.
+  > [!NOTE]
+  > This instruction-set target (i586 + MMX, no CMOV, no SSE) isn't actually AMD-specific — it should also run on a genuine Intel **Pentium MMX (P55C)**. This was confirmed by booting this project's image under QEMU with the `pentium,+mmx` CPU model, which matches that exact profile and showed no illegal-instruction crashes anywhere in the stack.
 * **System Memory Layout (`CONFIG_NOHIGHMEM=y`)**: Configures a flat 32-bit low memory layout since the 512MB RAM of the system fits entirely below the kernel's 896MB high memory split. This optimizes kernel memory mappings.
 * **ALi Aladdin V Chipset**:
   * `CONFIG_PCI=y` (PCI bus support)
@@ -66,7 +71,7 @@ This script will:
 * **Supported graphics cards**: 3dfx Voodoo 3 gets a native 2D driver (`xf86-video-tdfx`). ATI Radeon 7000 and NVIDIA GeForce 1/2/3 have no dedicated driver installed — `xf86-video-ati` requires GBM/Mesa3D/DRM for no real benefit on a GPU this old, and `xf86-video-nv` (2.1.22, its final upstream release, from 2013) calls `xf86DisableRandR()`, an internal xorg-server API removed since server ABI 1.20, so it fails to load ("symbol not found") on any current xorg-server with no config-level fix. Both instead rely on the kernel's `CONFIG_FB_RADEON`/`CONFIG_FB_NVIDIA` framebuffer drivers plus the generic `xf86-video-fbdev` DDX, which also serves as the catch-all fallback for the Voodoo 3. `/etc/X11/xorg.conf` (installed by `post-build.sh` only when `Xorg` is detected in the target) leaves the driver unset so Xorg autoprobes whichever card is actually installed, and its `Module` section preloads the helper modules (`fbdevhw`, `vgahw`, `int10`, `exa`, `shadow`, `shadowfb`) that `tdfx`/`fbdev` need at load time.
 * **Input driver**: `xf86-input-evdev`, which covers both USB and PS/2 devices uniformly via the kernel's generic input subsystem.
 * **DDC/I2C monitor detection** (`CONFIG_FB_3DFX_I2C`/`CONFIG_FB_RADEON_I2C`, both on by default in their own Kconfig entries; `CONFIG_FB_NVIDIA_I2C` needs an explicit enable) lets the kernel ask the actual connected monitor for its native mode. Without it, all three framebuffer drivers above fall back to a hardcoded 640x480@60 8bpp mode (confirmed from `tdfxfb.c`'s `mode_option` fallback) — usable, but cramped.
-* **Fluxbox** as the window manager: it bundles its own toolbar/workspace-switcher, so it needs no separate panel package, and is much lighter than a full GTK-based desktop stack — which matters on a 450MHz K6-2.
+* **Fluxbox** as the window manager: it bundles its own toolbar/workspace-switcher, so it needs no separate panel package, and is much lighter than a full GTK-based desktop stack — which matters on a slow K6.
 * **PCManFM** as the file manager, **xterm** as the terminal, **Dillo** as the web browser (its own tiny FLTK toolkit, not GTK — renders old-school HTML/CSS only, no JS, which is the only class of browser actually usable on this hardware), and **Leafpad** as a GTK2 text editor. xterm is bumped to version 411 via a `Dockerfile` patch to Buildroot's own package recipe, since the pinned 389 has a musl-libc bug (its manual `posix_openpt`/`grantpt`/`unlockpt` pty setup fails with "open ttydev: I/O error" — [Gentoo bug 689080](https://bugs.gentoo.org/689080)), fixed upstream in patch #391.
 * **DejaVu** TrueType fonts. Without them, the only fonts on the system are legacy X11 bitmap fonts (`.pcf`, the 1990s X11 "misc" collection) — Xft/Fluxbox tolerates that via a bitmap-font fallback, but GTK2/Pango (Leafpad, PCManFM) handles it far more fragilely, to the point of rendering a blank window.
 * **Desktop wallpaper and style**: `feh --bg-fill` (pure X11/imlib2, no GTK/dbus) sets `board/k6core/k6core-default.png` as the background from `.xinitrc` before Fluxbox starts. Fluxbox itself ships around 30 built-in styles but defaults to the plain "bloe" one; `post-build.sh` switches the system-wide init template (which `~/.fluxbox/init` is generated from on first run) to `zimek_darkblue` instead. That same init template also points `session.styleOverlay` at a style overlay (`background: none`) — without it, Fluxbox's `RootTheme.cc` unconditionally repaints the root window from the style's own `background:` directive on every startup, wiping out the wallpaper feh just set.
@@ -76,26 +81,25 @@ This script will:
 
 ---
 
-## 5. OS Details, Packages & Credentials
+## 5. OS Details & Packages
 
 * **Hostname**: `k6core`
 * **Default Shell**: `zsh` for user `root` (configured via `/etc/passwd` and `/etc/shells`)
 * **Default Banner**: `Welcome to K6Core Linux!`
-* **Root Password**: `k6core`
-* **Local Console**: `tty1` (standard getty login terminal)
 * **DHCP Networking**: Runs `dhcpcd` automatically on `eth0` at boot.
-* **SSH Access**: `dropbear` runs automatically at boot, allowing remote root login (password `k6core`) for diagnostics without needing a monitor/keyboard attached.
 * **Pre-installed Packages**: `zsh`, `bash`, `vim`, `htop`, `curl`, `dhcpcd`, `alsa-utils` (providing `alsamixer`/`amixer` to configure your Sound Blaster Live! card), `pciutils` (`lspci`), `usbutils` (`lsusb`), `hdparm` (CF card benchmarking/tuning), and `mpg123` (MP3 playback).
 * **Persistent ALSA Mixer State**: The `S45alsa` init script unmutes all mixer controls to a sane 80% on first boot (no saved state yet) and restores your saved levels on every subsequent boot via `alsactl restore`. Any changes you make with `alsamixer`/`amixer` are saved to `/var/lib/alsa/asound.state` on clean shutdown/reboot via `alsactl store`, so `mpg123 file.mp3` should just work without you needing to unmute anything by hand after the first boot.
 * **Sample Media**: If a `sample/` directory exists at the repo root, its contents are copied into `/root/sample` on the target filesystem during the build — a convenient place to drop an MP3 for testing `mpg123`/ALSA playback.
 
 ---
 
-## 6. Flashing Guide (macOS)
+## 6. Flashing Guide
+
+### macOS
 
 Follow these precise steps to safely flash the raw `disk.img` to your physical CompactFlash card on a Mac.
 
-### Step 1: Identify your CompactFlash Card Reader
+#### Step 1: Identify your CompactFlash Card Reader
 Insert your CF card reader with the CF card plugged in. Open your Mac Terminal and run:
 ```bash
 diskutil list
@@ -104,22 +108,45 @@ Review the output to find your CF card. Look for a disk matching around 4.0 GB (
 > [!CAUTION]
 > **Verify this carefully!** Selecting the wrong disk (like your Mac's internal drive) will erase all its data.
 
-### Step 2: Unmount the CF Card
+#### Step 2: Unmount the CF Card
 Assuming your CF card is identified as **/dev/diskX** (replace `X` with your actual card index, e.g., `disk4`):
 ```bash
 diskutil unmountDisk /dev/diskX
 ```
 
-### Step 3: Flash the Image using `dd`
+#### Step 3: Flash the Image using `dd`
 To maximize flash speeds, write to the raw disk device (`rdisk` instead of `disk`) and use a block size of 1MB:
 ```bash
 sudo dd if=disk.img of=/dev/rdiskX bs=1M status=progress
 ```
 *Input your macOS administrator password when prompted.*
 
-### Step 4: Eject the CF Card
+#### Step 4: Eject the CF Card
 Once the progress indicator shows the copy is complete, eject your card cleanly:
 ```bash
 diskutil eject /dev/diskX
 ```
-Your CompactFlash card is now bootable and ready to be plugged into your AMD K6-2 PC!
+Your CompactFlash card is now bootable and ready to be plugged into your AMD K6 PC!
+
+### Windows and Linux
+
+[balenaEtcher](https://www.balena.io/etcher) is free (Apache-2.0, no cost for personal or commercial use) and available for both Windows and Linux. It flashes straight from the `.zip` release asset — no need to extract `disk.img`/`disk-gui.img` first — and only lists removable drives as flash targets, which helps avoid picking the wrong one.
+
+#### Step 1: Install balenaEtcher
+Download and install it from [balena.io/etcher](https://www.balena.io/etcher) for your platform.
+
+#### Step 2: Select the Image
+Insert your CF card reader with the CF card plugged in, open balenaEtcher, and click **Flash from file**. Select the downloaded `k6core-latest.img.zip` (headless) or `k6core-gui-latest.img.zip` (GUI) — Etcher unzips it on the fly.
+
+#### Step 3: Select the Target
+Click **Select target** and pick your CF card from the list.
+> [!CAUTION]
+> **Verify this carefully!** Etcher only lists removable drives, but if you have multiple card readers or USB drives connected, double-check the size (around 4.0 GB) and device name before continuing.
+
+#### Step 4: Flash
+Click **Flash!**. Enter your administrator password if prompted (required to write to the raw device). Etcher writes the image and then verifies it automatically — wait for both to complete.
+
+#### Step 5: Eject
+Once Etcher reports success, eject the CF card through your OS's normal "safely remove"/"eject" action before unplugging it.
+
+Your CompactFlash card is now bootable and ready to be plugged into your AMD K6 PC!
