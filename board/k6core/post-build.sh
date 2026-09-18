@@ -128,4 +128,22 @@ else
     exit 1
 fi
 
+# 9. USB auto-mount (usbmount) NTFS support: the in-kernel NTFS3 driver
+# registers itself as fstype "ntfs3", but usbmount calls plain `mount -tntfs`
+# (blkid reports NTFS drives as TYPE="ntfs"). Install a /sbin/mount.ntfs
+# helper -- which BusyBox's mount falls back to once CONFIG_FEATURE_MOUNT_HELPERS
+# is on (see board/k6core/busybox.fragment) -- to redirect it to -tntfs3, and
+# add "ntfs" to usbmount's FILESYSTEMS whitelist so it attempts the mount at all.
+if [ -f "${TARGET_DIR}/etc/usbmount/usbmount.conf" ]; then
+    echo "Installing /sbin/mount.ntfs helper and enabling ntfs in usbmount.conf..."
+    mkdir -p "${TARGET_DIR}/sbin"
+    cat > "${TARGET_DIR}/sbin/mount.ntfs" <<'EOF'
+#!/bin/sh
+exec mount -tntfs3 "$@"
+EOF
+    chmod 755 "${TARGET_DIR}/sbin/mount.ntfs"
+    sed -i 's|^FILESYSTEMS="vfat ext2 ext3 ext4 hfsplus"$|FILESYSTEMS="vfat ext2 ext3 ext4 hfsplus ntfs"|' \
+        "${TARGET_DIR}/etc/usbmount/usbmount.conf"
+fi
+
 echo "=== K6Core Post-Build Script Complete ==="

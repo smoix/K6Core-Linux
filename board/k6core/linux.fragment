@@ -59,6 +59,31 @@ CONFIG_8139CP=y
 # Advanced Power Management (pre-ACPI era BIOS: needed for clean soft poweroff)
 CONFIG_APM=y
 
+# USB Host Controllers (UHCI: VIA southbridges; OHCI: ALi southbridges --
+# same chipset-pair split as the PCI/AGP, PATA, and sound sections above) plus
+# USB Mass Storage, so plugged-in USB drives show up as /dev/sdX (via the same
+# libata/SCSI disk path already pulled in by PATA_ALI/PATA_VIA) for the
+# usbmount package (see Custom Packages below) to auto-mount.
+CONFIG_USB_SUPPORT=y
+CONFIG_USB=y
+CONFIG_USB_UHCI_HCD=y
+CONFIG_USB_OHCI_HCD=y
+CONFIG_USB_STORAGE=y
+
+# VFAT filesystem: the default format on virtually all USB flash media
+CONFIG_VFAT_FS=y
+CONFIG_NLS_CODEPAGE_437=y
+CONFIG_NLS_ISO8859_1=y
+
+# NTFS filesystem, for Windows-formatted external drives, via the in-kernel
+# read-write NTFS3 driver (replaces the old read-only NTFS_FS). It registers
+# itself as fstype "ntfs3", not "ntfs", so usbmount's plain `mount -tntfs`
+# call is made to work via a /sbin/mount.ntfs helper installed by
+# post-build.sh -- see BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES in the
+# defconfig for the BusyBox mount-helpers feature that call depends on.
+CONFIG_NTFS3_FS=y
+# CONFIG_NTFS_FS is not set
+
 # Legacy Floppy Disk Support (GA-5AX onboard floppy header)
 CONFIG_BLK_DEV_FD=y
 

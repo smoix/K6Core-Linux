@@ -1,0 +1,6 @@
+# Enable external mount helper delegation (BusyBox defaults this off). Needed
+# so `mount -tntfs` (what usbmount calls, per blkid's reported TYPE) falls
+# back to the /sbin/mount.ntfs helper -- installed by post-build.sh -- which
+# re-execs it as `-tntfs3` for the in-kernel NTFS3 driver, since NTFS3
+# registers itself as fstype "ntfs3", not "ntfs".
+CONFIG_FEATURE_MOUNT_HELPERS=y
