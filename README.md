@@ -17,7 +17,6 @@ All configuration flags and options you see below are related to Buildroot and r
 3. [Build Instructions](#3-build-instructions)
 4. [Flashing Guide](#4-flashing-guide)
 5. [Disk Sizing, Alignment, and Write-Reduction](#5-disk-sizing-alignment-and-write-reduction)
-6. [Build & Caching Architecture](#6-build--caching-architecture)
 
 ---
 
