@@ -4,6 +4,18 @@ set -e
 # Usage: ./build.sh [headless|gui]
 VARIANT="${1:-headless}"
 
+# Fail fast on missing prerequisites rather than after a multi-hour compile
+for cmd in docker zip; do
+    if ! command -v "${cmd}" >/dev/null 2>&1; then
+        echo "Error: '${cmd}' is required but not found in PATH." >&2
+        exit 1
+    fi
+done
+if ! docker info >/dev/null 2>&1; then
+    echo "Error: Docker daemon is not running or not reachable." >&2
+    exit 1
+fi
+
 case "${VARIANT}" in
     headless)
         DEFCONFIG="k6core_defconfig"

@@ -22,6 +22,8 @@
       [exec] (leafpad) {leafpad}
 [submenu] (System Tools)
       [exec]   (top) {xterm -e top}
+      [exec]   (Shutdown) {xmessage -center -buttons Yes:0,No:1 "Shut down now?" && poweroff}
+      [exec]   (Reboot) {xmessage -center -buttons Yes:0,No:1 "Reboot now?" && reboot}
 [end]
 [submenu] (Fluxbox menu)
       [config] (Configure)

@@ -1,13 +1,17 @@
 # K6Core Linux: Minimal Distribution for AMD K6 CPUs
 
-**K6Core** is an optimized and (rather) minimal, Linux distribution designed specifically for an **AMD K6 and up** processor running on an **ALi Aladdin V** chipset motherboard — e.g. a **Gigabyte GA-5AX** or **Asus P5A** — with compatibility for VIA MVP3 chipset boards as well. It is built completely from source using **Buildroot 2025.02.1** in a Docker-based compilation environment. Pre-built images are also available.
+**K6Core** is an optimized and (rather) minimal, Linux distribution designed specifically for an **AMD K6 and up** processor running on an **ALi Aladdin V** chipset motherboard — e.g. a **Gigabyte GA-5AX** or **Asus P5A** — with compatibility for VIA MVP3 chipset boards as well. It is built completely from source using **Buildroot 2025.02.1** in a Docker-based compilation environment. Pre-built images are also available from the [Releases page](https://github.com/smoix/K6Core-Linux/releases).
 
-Why another Linux distro? Because of the technical challenge to build a modern software stack for such old CPUs. We are currently at the edge of what's possible, the very latest kernels (as of 2026) are not friendly to old hardware anymore and that's to be expected. This project is built by a retrocomputing enthusiast lurking on th3 Vogons forum with the help of Claude just because I can.
+Why another Linux distro? Because of the technical challenge to build a modern software stack for such old CPUs. We are currently at the edge of what's possible, the very latest kernels (as of 2026) are not friendly to old hardware anymore and that's to be expected. This project is built by a retrocomputing enthusiast lurking on the Vogons forum with the help of Claude just because I can.
 
 All configuration flags and options you see below are related to Buildroot and required a lot of trial and error on real hardware to debug the system to a point where it's usable.
 
 > [!IMPORTANT]
 > **Default login**: `root` / `k6core` — on the local console (`tty1`) or over SSH (`dropbear` starts automatically; the board gets its address via DHCP on `eth0`).
+
+**Quick Start**
+* Just want to flash a pre-built image? → Grab a `.img.zip` from the [Releases page](https://github.com/smoix/K6Core-Linux/releases) and jump to [4. Flashing Guide](#4-flashing-guide).
+* Building it yourself instead? → Start at [3. Build Instructions](#3-build-instructions).
 
 ---
 
@@ -22,7 +26,7 @@ All configuration flags and options you see below are related to Buildroot and r
 
 ## 1. Hardware-Specific Drivers & Optimizations
 
-* **CPU Support (`-march=k6` / `CONFIG_MK6=y`)**: Targets the base AMD K6 instruction set — i586 baseline plus MMX — while strictly omitting the `CMOV` instruction (unsupported across the entire K6 line, up to and including K6-III+) and not emitting 3DNow! (that would require `-march=k6-2`/`k6-3` instead). Since 3DNow! is simply unused rather than actively avoided, the resulting binaries run correctly on every K6-family CPU: the original K6 and K6 "Little Foot", K6-2 and K6-2+, and K6-III and K6-III+. This instruction-set target isn't actually AMD-specific — it should also run on a genuine Intel **Pentium MMX (P55C)**. Change this if you want to adapt the whole project to classic K5 or Pentiums (P54) or Pentium Pro (P6).
+* **CPU Support (`-march=k6` / `CONFIG_MK6=y`)**: Targets the base AMD K6 instruction set — i586 baseline plus MMX — while strictly omitting the `CMOV` instruction (unsupported across the entire K6 line, up to and including K6-III+) and not emitting 3DNow! (that would require `-march=k6-2`/`k6-3` instead). Since 3DNow! is simply unused rather than actively avoided, the resulting binaries run correctly on every K6-family CPU: the original K6 and K6 "Little Foot", K6-2 and K6-2+, and K6-III and K6-III+. This instruction-set target isn't actually AMD-specific — it should also run on a genuine Intel Pentium MMX (P55C). Change this if you want to adapt the whole project to classic K5 or Pentiums (P54) or Pentium Pro (P6).
 * **ALi Aladdin V Chipset**:
   * `CONFIG_PCI=y` (PCI bus support)
   * `CONFIG_AGP=y` & `CONFIG_AGP_ALI=y` (ALi Aladdin V AGP controller support)
