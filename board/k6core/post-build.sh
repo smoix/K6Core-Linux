@@ -90,13 +90,17 @@ if [ -f "${TARGET_DIR}/usr/bin/Xorg" ]; then
         rm -f "${TARGET_DIR}/etc/init.d/S40xorg"
     fi
 
-    # Desktop wallpaper (set by .xinitrc via feh), a nicer default Fluxbox
-    # style (it ships ~30 of its own, but defaults to the plain "bloe" one),
-    # a curated menu (the stock one has a dead "firefox" stub -- we don't
-    # ship Firefox -- and never lists dillo/leafpad), and a style overlay
-    # that stops the style's own background: directive from repainting over
-    # feh's wallpaper on every startup (RootTheme.cc calls fbsetbg with the
-    # style's background unconditionally unless an overlay says otherwise).
+    # Desktop wallpaper (set via PCManFM's own desktop-items-0.conf, read
+    # when .xinitrc launches it with --desktop -- PCManFM ignores wallpaper
+    # CLI flags unless a desktop-mode instance is already running, so the
+    # config file has to be in place before the first launch), a nicer
+    # default Fluxbox style (it ships ~30 of its own, but defaults to the
+    # plain "bloe" one), a curated menu (the stock one has a dead "firefox"
+    # stub -- we don't ship Firefox -- and never lists dillo/leafpad), and a
+    # style overlay that stops the style's own background: directive from
+    # repainting over PCManFM's wallpaper on every startup (RootTheme.cc
+    # calls fbsetbg with the style's background unconditionally unless an
+    # overlay says otherwise).
     #
     # session.menuFile/styleOverlay point at absolute /usr/share/fluxbox/...
     # paths rather than the ~/.fluxbox/... ones Fluxbox's own init template
@@ -115,6 +119,14 @@ if [ -f "${TARGET_DIR}/usr/bin/Xorg" ]; then
                 -e '/^session\.styleFile:/a\
 session.styleOverlay:\t/usr/share/fluxbox/overlay' \
                 "${TARGET_DIR}/usr/share/fluxbox/init"
+        fi
+        if [ -f "${TARGET_DIR}/usr/bin/pcmanfm" ]; then
+            echo "Installing PCManFM desktop-mode wallpaper config and desktop icons..."
+            mkdir -p "${TARGET_DIR}/root/.config/pcmanfm/default"
+            cp -f "${BOARD_DIR}/pcmanfm-desktop-items.conf" "${TARGET_DIR}/root/.config/pcmanfm/default/desktop-items-0.conf"
+            mkdir -p "${TARGET_DIR}/root/Desktop"
+            cp -f "${BOARD_DIR}/desktop-icons/"*.desktop "${TARGET_DIR}/root/Desktop/"
+            chmod 755 "${TARGET_DIR}/root/Desktop/"*.desktop
         fi
     fi
 fi

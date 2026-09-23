@@ -98,11 +98,6 @@ BR2_PACKAGE_DEJAVU=y
 BR2_PACKAGE_LEAFPAD=y
 BR2_PACKAGE_DILLO=y
 
-# feh: sets the desktop wallpaper (board/k6core/k6core-default.png) from
-# .xinitrc before Fluxbox starts. Pure X11/imlib2, no GTK/dbus, so it doesn't
-# reintroduce the weight of the LXDE stack this project moved away from.
-BR2_PACKAGE_FEH=y
-
 # Non-Journaled ext4 Root Filesystem
 BR2_TARGET_ROOTFS_EXT2=y
 BR2_TARGET_ROOTFS_EXT2_4=y
