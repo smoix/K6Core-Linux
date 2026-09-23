@@ -2,6 +2,10 @@
 
 **K6Core** is an optimized and (rather) minimal, Linux distribution designed specifically for an **AMD K6 and up** processor running on an **ALi Aladdin V** chipset motherboard — e.g. a **Gigabyte GA-5AX** or **Asus P5A** — with compatibility for VIA MVP3 chipset boards as well. It is built completely from source using **Buildroot 2025.02.1** in a Docker-based compilation environment. Pre-built images are also available.
 
+Why another Linux distro? Because of the technical challenge to build a modern software stack for such old CPUs. We are currently at the edge of what's possible, the very latest kernels (as of 2026) are not friendly to old hardware anymore and that's to be expected. This project is built by a retrocomputing enthusiast lurking on th3 Vogons forum with the help of Claude just because I can.
+
+All configuration flags and options you see below are related to Buildroot and required a lot of trial and error on real hardware to debug the system to a point where it's usable.
+
 > [!IMPORTANT]
 > **Default login**: `root` / `k6core` — on the local console (`tty1`) or over SSH (`dropbear` starts automatically; the board gets its address via DHCP on `eth0`).
 
@@ -19,8 +23,7 @@
 
 ## 1. Hardware-Specific Drivers & Optimizations
 
-* **CPU Support (`-march=k6` / `CONFIG_MK6=y`)**: Targets the base AMD K6 instruction set — i586 baseline plus MMX — while strictly omitting the `CMOV` instruction (unsupported across the entire K6 line, up to and including K6-III+) and not emitting 3DNow! (that would require `-march=k6-2`/`k6-3` instead). Since 3DNow! is simply unused rather than actively avoided, the resulting binaries run correctly on every K6-family CPU: the original K6 and K6 "Little Foot", K6-2 and K6-2+, and K6-III and K6-III+. This instruction-set target isn't actually AMD-specific — it should also run on a genuine Intel **Pentium MMX (P55C)**.
-* **System Memory Layout (`CONFIG_NOHIGHMEM=y`)**: Configures a flat 32-bit low memory layout since the 512MB RAM of the system fits entirely below the kernel's 896MB high memory split. This optimizes kernel memory mappings.
+* **CPU Support (`-march=k6` / `CONFIG_MK6=y`)**: Targets the base AMD K6 instruction set — i586 baseline plus MMX — while strictly omitting the `CMOV` instruction (unsupported across the entire K6 line, up to and including K6-III+) and not emitting 3DNow! (that would require `-march=k6-2`/`k6-3` instead). Since 3DNow! is simply unused rather than actively avoided, the resulting binaries run correctly on every K6-family CPU: the original K6 and K6 "Little Foot", K6-2 and K6-2+, and K6-III and K6-III+. This instruction-set target isn't actually AMD-specific — it should also run on a genuine Intel **Pentium MMX (P55C)**. Change this if you want to adapt the whole project to classic K5 or Pentiums (P54) or Pentium Pro (P6).
 * **ALi Aladdin V Chipset**:
   * `CONFIG_PCI=y` (PCI bus support)
   * `CONFIG_AGP=y` & `CONFIG_AGP_ALI=y` (ALi Aladdin V AGP controller support)
@@ -144,13 +147,3 @@ Your CompactFlash card is now bootable and ready to be plugged into your AMD K6 
 * **1MB Alignment (Sector 2048)**: Aligns the primary root partition at a 1MB boundary. This alignment protects the underlying flash memory cells from write amplification caused by partition-to-flash-erase-block misalignment.
 * **Non-Journaled EXT4**: Disables the journal (`-O ^has_journal`) while retaining EXT4's modern extents, fast multi-block allocator, and speedy fsck. This completely eliminates the double-write wear penalty of journaling filesystems, dramatically extending the life of your CompactFlash card.
 * **Flash-Friendly Mount Options**: Mounts the filesystem with `noatime,nodiratime` to prevent write wear when reading files, and uses `commit=60` to cache writes and flush them every 60 seconds.
-
----
-
-## 6. Build & Caching Architecture
-
-The compilation is performed inside a lightweight Ubuntu-based Docker container. This guarantees build reproducibility and eliminates dependency conflicts on macOS.
-
-* **Out-of-Tree Builds (`make O=...`)**: Buildroot remains clean and unmodified in `/buildroot` while all compilation objects, cache files, and configurations are written to `/root/buildroot-output`.
-* **Persistent Docker Cache Volume**: A Docker volume (`k6core-build-cache` for the headless variant, `k6core-gui-build-cache` for the GUI variant — see below) is mapped to `/root/buildroot-output`. This volume caches the entire compiler toolchain and compilation objects across runs, reducing subsequent build times to under 30 seconds.
-* **Two Variants, One Script**: `build.sh` is parameterized by variant rather than duplicated. Both variants share the same `Dockerfile`/builder image and the same `board/k6core/` scripts — only the Buildroot `defconfig`, the cache volume, and the output image filename differ. This keeps driver/config changes (like everything in section 1) from drifting out of sync between variants.
