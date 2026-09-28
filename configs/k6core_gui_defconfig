@@ -98,6 +98,13 @@ BR2_PACKAGE_DEJAVU=y
 BR2_PACKAGE_LEAFPAD=y
 BR2_PACKAGE_DILLO=y
 
+# shared-mime-info: compiles the MIME database (mime.cache) GIO/libfm use to
+# recognize file types. Without it, PCManFM's desktop can't tell a .desktop
+# launcher (application/x-desktop) from a plain file, so it shows the four
+# desktop icons as generic blank-file icons labeled with the raw filename
+# (e.g. "xterm.desktop") instead of a proper icon and clean launcher name.
+BR2_PACKAGE_SHARED_MIME_INFO=y
+
 # Non-Journaled ext4 Root Filesystem
 BR2_TARGET_ROOTFS_EXT2=y
 BR2_TARGET_ROOTFS_EXT2_4=y
