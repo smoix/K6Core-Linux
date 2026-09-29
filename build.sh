@@ -16,7 +16,7 @@ fi
 DEFCONFIG="k6core_gui_defconfig"
 VOLUME_NAME="k6core-gui-build-cache"
 DISK_IMAGE="k6core.img"
-ZIP_NAME="k6core-gui-latest.img.zip"
+ZIP_NAME="k6core.img.zip"
 
 # Define image and volume names
 IMAGE_NAME="k6core-builder"

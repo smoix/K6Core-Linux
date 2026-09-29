@@ -62,7 +62,7 @@ All configuration flags and options you see below are related to Buildroot and r
 ### Compilation
 Run the compilation script from the workspace root:
 ```bash
-./build.sh             # X11 + Fluxbox desktop, real hardware -> k6core.img / k6core-gui-latest.img.zip
+./build.sh             # X11 + Fluxbox desktop, real hardware -> k6core.img / k6core.img.zip
 ```
 This script will:
 1. Initialize the persistent Docker cache volume.
@@ -91,7 +91,7 @@ This script will:
 Download and install it from [balena.io/etcher](https://www.balena.io/etcher) for your platform.
 
 #### Step 2: Select the Image
-Insert your CF card reader with the CF card plugged in, open balenaEtcher, and click **Flash from file**. Select the downloaded `k6core-gui-latest.img.zip` — Etcher unzips it on the fly.
+Insert your CF card reader with the CF card plugged in, open balenaEtcher, and click **Flash from file**. Select the downloaded `k6core.img.zip` — Etcher unzips it on the fly.
 
 #### Step 3: Select the Target
 Click **Select target** and pick your CF card from the list.
