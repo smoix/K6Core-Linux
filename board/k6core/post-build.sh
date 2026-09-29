@@ -121,12 +121,9 @@ session.styleOverlay:\t/usr/share/fluxbox/overlay' \
                 "${TARGET_DIR}/usr/share/fluxbox/init"
         fi
         if [ -f "${TARGET_DIR}/usr/bin/pcmanfm" ]; then
-            echo "Installing PCManFM desktop-mode wallpaper config and desktop icons..."
+            echo "Installing PCManFM desktop-mode wallpaper config..."
             mkdir -p "${TARGET_DIR}/root/.config/pcmanfm/default"
             cp -f "${BOARD_DIR}/pcmanfm-desktop-items.conf" "${TARGET_DIR}/root/.config/pcmanfm/default/desktop-items-0.conf"
-            mkdir -p "${TARGET_DIR}/root/Desktop"
-            cp -f "${BOARD_DIR}/desktop-icons/"*.desktop "${TARGET_DIR}/root/Desktop/"
-            chmod 755 "${TARGET_DIR}/root/Desktop/"*.desktop
         fi
     fi
 fi

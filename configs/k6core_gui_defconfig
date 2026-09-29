@@ -63,6 +63,13 @@ BR2_PACKAGE_XSERVER_XORG_SERVER=y
 BR2_PACKAGE_XSERVER_XORG_SERVER_MODULAR=y
 BR2_PACKAGE_XAPP_XINIT=y
 
+# xmessage: the fluxbox-menu's Shutdown/Reboot confirmation dialogs and its
+# "About" entry both pipe into `xmessage`, but nothing previously installed
+# it -- every one of those menu entries silently did nothing (the missing
+# binary made the whole `xmessage && poweroff`-style command fail before
+# reaching poweroff/reboot at all).
+BR2_PACKAGE_XAPP_XMESSAGE=y
+
 # Graphics drivers: 3dfx Voodoo 3 native; fbdev as a generic fallback and as
 # the only path for both ATI Radeon 7000 and NVIDIA GeForce 1/2/3 (see
 # linux.fragment's CONFIG_FB_RADEON / CONFIG_FB_NVIDIA, bound to by fbdev).

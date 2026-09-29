@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=dillo
-Exec=dillo
-Icon=web-browser
-Terminal=false
-Categories=Network;
