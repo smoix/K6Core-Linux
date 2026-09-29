@@ -60,19 +60,18 @@ All configuration flags and options you see below are related to Buildroot and r
 * Docker Desktop installed and running.
 
 ### Compilation
-Run the compilation script from the workspace root, optionally naming a variant (defaults to `headless`):
+Run the compilation script from the workspace root:
 ```bash
-./build.sh            # headless console image                -> disk.img / k6core-latest.img.zip
-./build.sh gui        # X11 + Fluxbox desktop, real hardware   -> disk-gui.img / k6core-gui-latest.img.zip
+./build.sh             # X11 + Fluxbox desktop, real hardware -> disk-gui.img / k6core-gui-latest.img.zip
 ```
 This script will:
-1. Initialize the persistent Docker cache volume for the chosen variant.
-2. Build the compilation container (shared by both variants).
-3. Fetch, configure, and compile Buildroot 2025.02.1 and Linux Kernel 6.6.x using the variant's `defconfig`.
+1. Initialize the persistent Docker cache volume.
+2. Build the compilation container.
+3. Fetch, configure, and compile Buildroot 2025.02.1 and Linux Kernel 6.6.x using `configs/k6core_gui_defconfig`.
 4. Output the final flashable raw image directly to your workspace root.
 
-### GUI Variant Details
-`configs/k6core_gui_defconfig` builds on top of the headless config and adds:
+### Build Details
+`configs/k6core_gui_defconfig` enables:
 * **No auto-start**: You need to run `startx` manually in order to have a GUI, easier if you have to debug something.
 * **X.Org (modular server)**: `BR2_PACKAGE_XSERVER_XORG_SERVER_MODULAR=y`, needed because graphics drivers are separate packages from the server.
 * **Supported graphics cards**: 3dfx Voodoo 3 gets a native 2D driver (`xf86-video-tdfx`). ATI Radeon 7000 and NVIDIA GeForce 1/2/3 have no dedicated driver installed — `xf86-video-ati` requires GBM/Mesa3D/DRM for no real benefit on a GPU this old, and `xf86-video-nv` (2.1.22, its final upstream release, from 2013) calls `xf86DisableRandR()`, an internal xorg-server API removed since server ABI 1.20, so it fails to load ("symbol not found") on any current xorg-server with no config-level fix. Both instead rely on the kernel's `CONFIG_FB_RADEON`/`CONFIG_FB_NVIDIA` framebuffer drivers plus the generic `xf86-video-fbdev` DDX, which also serves as the catch-all fallback for the Voodoo 3. `/etc/X11/xorg.conf` (installed by `post-build.sh` only when `Xorg` is detected in the target) leaves the driver unset so Xorg autoprobes whichever card is actually installed, and its `Module` section preloads the helper modules (`fbdevhw`, `vgahw`, `int10`, `exa`, `shadow`, `shadowfb`) that `tdfx`/`fbdev` need at load time.
@@ -88,7 +87,7 @@ This script will:
 
 ### macOS
 
-Follow these precise steps to safely flash the raw `disk.img` to your physical CompactFlash card on a Mac.
+Follow these precise steps to safely flash the raw `disk-gui.img` to your physical CompactFlash card on a Mac.
 
 #### Step 1: Identify your CompactFlash Card Reader
 Insert your CF card reader with the CF card plugged in. Open your Mac Terminal and run:
@@ -108,7 +107,7 @@ diskutil unmountDisk /dev/diskX
 #### Step 3: Flash the Image using `dd`
 To maximize flash speeds, write to the raw disk device (`rdisk` instead of `disk`) and use a block size of 1MB:
 ```bash
-sudo dd if=disk.img of=/dev/rdiskX bs=1M status=progress
+sudo dd if=disk-gui.img of=/dev/rdiskX bs=1M status=progress
 ```
 *Input your macOS administrator password when prompted.*
 
@@ -121,13 +120,13 @@ Your CompactFlash card is now bootable and ready to be plugged into your AMD K6 
 
 ### Windows and Linux
 
-[balenaEtcher](https://www.balena.io/etcher) is free (Apache-2.0, no cost for personal or commercial use) and available for both Windows and Linux. It flashes straight from the `.zip` release asset — no need to extract `disk.img`/`disk-gui.img` first — and only lists removable drives as flash targets, which helps avoid picking the wrong one.
+[balenaEtcher](https://www.balena.io/etcher) is free (Apache-2.0, no cost for personal or commercial use) and available for both Windows and Linux. It flashes straight from the `.zip` release asset — no need to extract `disk-gui.img` first — and only lists removable drives as flash targets, which helps avoid picking the wrong one.
 
 #### Step 1: Install balenaEtcher
 Download and install it from [balena.io/etcher](https://www.balena.io/etcher) for your platform.
 
 #### Step 2: Select the Image
-Insert your CF card reader with the CF card plugged in, open balenaEtcher, and click **Flash from file**. Select the downloaded `k6core-latest.img.zip` (headless) or `k6core-gui-latest.img.zip` (GUI) — Etcher unzips it on the fly.
+Insert your CF card reader with the CF card plugged in, open balenaEtcher, and click **Flash from file**. Select the downloaded `k6core-gui-latest.img.zip` — Etcher unzips it on the fly.
 
 #### Step 3: Select the Target
 Click **Select target** and pick your CF card from the list.
@@ -149,4 +148,3 @@ Your CompactFlash card is now bootable and ready to be plugged into your AMD K6 
 * **3.7GB Disk Image Constraint**: Physical "4GB" CompactFlash cards vary slightly in their exact sector count depending on manufacturer tolerances. To guarantee that `disk.img` safely fits *any* 4GB CF card, the image size is strictly limited to exactly **3,699,999,744 bytes (~3.7GB decimal)**.
 * **1MB Alignment (Sector 2048)**: Aligns the primary root partition at a 1MB boundary. This alignment protects the underlying flash memory cells from write amplification caused by partition-to-flash-erase-block misalignment.
 * **Non-Journaled EXT4**: Disables the journal (`-O ^has_journal`) while retaining EXT4's modern extents, fast multi-block allocator, and speedy fsck. This completely eliminates the double-write wear penalty of journaling filesystems, dramatically extending the life of your CompactFlash card.
-* **Flash-Friendly Mount Options**: No mount-time options are passed for the root filesystem. `rootflags=noatime` on the GRUB kernel command line was tried, but at early boot `rootflags` is handed directly to each filesystem driver's own option parser rather than split into generic VFS flags first (the split only happens for a userspace `mount(8)` call) — every filesystem driver rejected `noatime` as an unrecognized parameter, and root failed to mount at all. `commit=`, which would batch and delay writes further, is also not an option: it's a journal-commit-interval setting, incompatible with this filesystem's disabled journal (`-O ^has_journal` above) — the kernel rejects it outright too.

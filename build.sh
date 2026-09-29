@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-# Usage: ./build.sh [headless|gui]
-VARIANT="${1:-headless}"
-
 # Fail fast on missing prerequisites rather than after a multi-hour compile
 for cmd in docker zip; do
     if ! command -v "${cmd}" >/dev/null 2>&1; then
@@ -16,29 +13,15 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
-case "${VARIANT}" in
-    headless)
-        DEFCONFIG="k6core_defconfig"
-        VOLUME_NAME="k6core-build-cache"
-        DISK_IMAGE="disk.img"
-        ZIP_NAME="k6core-latest.img.zip"
-        ;;
-    gui)
-        DEFCONFIG="k6core_gui_defconfig"
-        VOLUME_NAME="k6core-gui-build-cache"
-        DISK_IMAGE="disk-gui.img"
-        ZIP_NAME="k6core-gui-latest.img.zip"
-        ;;
-    *)
-        echo "Usage: $0 [headless|gui]"
-        exit 1
-        ;;
-esac
+DEFCONFIG="k6core_gui_defconfig"
+VOLUME_NAME="k6core-gui-build-cache"
+DISK_IMAGE="disk-gui.img"
+ZIP_NAME="k6core-gui-latest.img.zip"
 
 # Define image and volume names
 IMAGE_NAME="k6core-builder"
 
-echo "=== Building K6Core variant: ${VARIANT} (defconfig: ${DEFCONFIG}) ==="
+echo "=== Building K6Core (defconfig: ${DEFCONFIG}) ==="
 
 echo "=== Checking Docker Volume: ${VOLUME_NAME} ==="
 if ! docker volume inspect "${VOLUME_NAME}" >/dev/null 2>&1; then
