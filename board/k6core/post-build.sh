@@ -124,6 +124,12 @@ session.styleOverlay:\t/usr/share/fluxbox/overlay' \
             echo "Installing PCManFM desktop-mode wallpaper config..."
             mkdir -p "${TARGET_DIR}/root/.config/pcmanfm/default"
             cp -f "${BOARD_DIR}/pcmanfm-desktop-items.conf" "${TARGET_DIR}/root/.config/pcmanfm/default/desktop-items-0.conf"
+            # Explicitly remove: a previous version of this script used to
+            # install .desktop launcher icons here, and Buildroot's target
+            # directory is an incrementally-updated cache -- it only reflects
+            # what this script adds, not what an older version of it removed,
+            # so stale files from old builds persist until deleted outright.
+            rm -rf "${TARGET_DIR}/root/Desktop"
         fi
     fi
 fi
