@@ -62,7 +62,7 @@ All configuration flags and options you see below are related to Buildroot and r
 ### Compilation
 Run the compilation script from the workspace root:
 ```bash
-./build.sh             # X11 + Fluxbox desktop, real hardware -> disk-gui.img / k6core-gui-latest.img.zip
+./build.sh             # X11 + Fluxbox desktop, real hardware -> k6core.img / k6core-gui-latest.img.zip
 ```
 This script will:
 1. Initialize the persistent Docker cache volume.
@@ -85,7 +85,7 @@ This script will:
 
 ## 4. Flashing Guide
 
-[balenaEtcher](https://www.balena.io/etcher) is free (Apache-2.0, no cost for personal or commercial use) and available for macOS, Windows, and Linux. It flashes straight from the `.zip` release asset — no need to extract `disk-gui.img` first — and only lists removable drives as flash targets, which helps avoid picking the wrong one.
+[balenaEtcher](https://www.balena.io/etcher) is free (Apache-2.0, no cost for personal or commercial use) and available for macOS, Windows, and Linux. It flashes straight from the `.zip` release asset — no need to extract `k6core.img` first — and only lists removable drives as flash targets, which helps avoid picking the wrong one.
 
 #### Step 1: Install balenaEtcher
 Download and install it from [balena.io/etcher](https://www.balena.io/etcher) for your platform.
@@ -110,6 +110,6 @@ Your CompactFlash card is now bootable and ready to be plugged into your AMD K6 
 
 ## 5. Disk Sizing, Alignment, and Write-Reduction
 
-* **3.7GB Disk Image Constraint**: Physical "4GB" CompactFlash cards vary slightly in their exact sector count depending on manufacturer tolerances. To guarantee that `disk.img` safely fits *any* 4GB CF card, the image size is strictly limited to exactly **3,699,999,744 bytes (~3.7GB decimal)**.
+* **3.7GB Disk Image Constraint**: Physical "4GB" CompactFlash cards vary slightly in their exact sector count depending on manufacturer tolerances. To guarantee that `k6core.img` safely fits *any* 4GB CF card, the image size is strictly limited to exactly **3,699,999,744 bytes (~3.7GB decimal)**.
 * **1MB Alignment (Sector 2048)**: Aligns the primary root partition at a 1MB boundary. This alignment protects the underlying flash memory cells from write amplification caused by partition-to-flash-erase-block misalignment.
 * **Non-Journaled EXT4**: Disables the journal (`-O ^has_journal`) while retaining EXT4's modern extents, fast multi-block allocator, and speedy fsck. This completely eliminates the double-write wear penalty of journaling filesystems, dramatically extending the life of your CompactFlash card.

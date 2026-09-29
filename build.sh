@@ -15,7 +15,7 @@ fi
 
 DEFCONFIG="k6core_gui_defconfig"
 VOLUME_NAME="k6core-gui-build-cache"
-DISK_IMAGE="disk-gui.img"
+DISK_IMAGE="k6core.img"
 ZIP_NAME="k6core-gui-latest.img.zip"
 
 # Define image and volume names
@@ -46,8 +46,8 @@ docker run --rm \
         echo '=== Compilation Started ===' && \
         make -C /buildroot O=/root/buildroot-output && \
         echo '=== Compilation Completed successfully! ===' && \
-        cp /root/buildroot-output/images/disk.img /workspace/${DISK_IMAGE} && \
-        echo '=== Copied disk.img to workspace as ${DISK_IMAGE} ==='
+        cp /root/buildroot-output/images/${DISK_IMAGE} /workspace/${DISK_IMAGE} && \
+        echo '=== Copied ${DISK_IMAGE} to workspace ==='
     "
 
 echo "=== Compressing ${DISK_IMAGE} into ${ZIP_NAME} ==="
