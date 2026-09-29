@@ -85,42 +85,7 @@ This script will:
 
 ## 4. Flashing Guide
 
-### macOS
-
-Follow these precise steps to safely flash the raw `disk-gui.img` to your physical CompactFlash card on a Mac.
-
-#### Step 1: Identify your CompactFlash Card Reader
-Insert your CF card reader with the CF card plugged in. Open your Mac Terminal and run:
-```bash
-diskutil list
-```
-Review the output to find your CF card. Look for a disk matching around 4.0 GB (e.g., `disk3` or `disk4`). 
-> [!CAUTION]
-> **Verify this carefully!** Selecting the wrong disk (like your Mac's internal drive) will erase all its data.
-
-#### Step 2: Unmount the CF Card
-Assuming your CF card is identified as **/dev/diskX** (replace `X` with your actual card index, e.g., `disk4`):
-```bash
-diskutil unmountDisk /dev/diskX
-```
-
-#### Step 3: Flash the Image using `dd`
-To maximize flash speeds, write to the raw disk device (`rdisk` instead of `disk`) and use a block size of 1MB:
-```bash
-sudo dd if=disk-gui.img of=/dev/rdiskX bs=1M status=progress
-```
-*Input your macOS administrator password when prompted.*
-
-#### Step 4: Eject the CF Card
-Once the progress indicator shows the copy is complete, eject your card cleanly:
-```bash
-diskutil eject /dev/diskX
-```
-Your CompactFlash card is now bootable and ready to be plugged into your AMD K6 PC!
-
-### Windows and Linux
-
-[balenaEtcher](https://www.balena.io/etcher) is free (Apache-2.0, no cost for personal or commercial use) and available for both Windows and Linux. It flashes straight from the `.zip` release asset — no need to extract `disk-gui.img` first — and only lists removable drives as flash targets, which helps avoid picking the wrong one.
+[balenaEtcher](https://www.balena.io/etcher) is free (Apache-2.0, no cost for personal or commercial use) and available for macOS, Windows, and Linux. It flashes straight from the `.zip` release asset — no need to extract `disk-gui.img` first — and only lists removable drives as flash targets, which helps avoid picking the wrong one.
 
 #### Step 1: Install balenaEtcher
 Download and install it from [balena.io/etcher](https://www.balena.io/etcher) for your platform.
