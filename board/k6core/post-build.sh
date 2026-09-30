@@ -159,6 +159,16 @@ EOF
     chmod 755 "${TARGET_DIR}/sbin/mount.ntfs"
     sed -i 's|^FILESYSTEMS="vfat ext2 ext3 ext4 hfsplus"$|FILESYSTEMS="vfat ext2 ext3 ext4 hfsplus ntfs"|' \
         "${TARGET_DIR}/etc/usbmount/usbmount.conf"
+
+    # Buildroot's own patch to usbmount.rules (0001-rules-fix.patch) matches
+    # ANY "sd*" block device, not just USB ones -- see the installed rule
+    # file's own comment for the full explanation. Without this override,
+    # /dev/sda1 (our boot/root partition) gets mounted a second time under
+    # /media/usb0 via udev's boot-time coldplug pass.
+    echo "Installing udev rule to exclude the boot disk from usbmount..."
+    mkdir -p "${TARGET_DIR}/etc/udev/rules.d"
+    cp -f "${BOARD_DIR}/zz-k6core-exclude-root-from-usbmount.rules" \
+        "${TARGET_DIR}/etc/udev/rules.d/zz-k6core-exclude-root-from-usbmount.rules"
 fi
 
 echo "=== K6Core Post-Build Script Complete ==="

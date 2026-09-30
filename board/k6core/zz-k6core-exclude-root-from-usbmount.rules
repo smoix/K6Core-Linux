@@ -1,0 +1,18 @@
+# Exclude the boot/root disk from usbmount. Buildroot's own patch to
+# usbmount.rules (0001-rules-fix.patch) replaced the upstream rule's
+# "SUBSYSTEMS==\"usb\"" check (walks up the device tree for a USB ancestor)
+# with "SUBSYSTEM==\"block\"" (true for the device's own immediate
+# subsystem, which is "block" for ANY disk -- PATA/IDE included). That
+# silently removed the USB-only restriction: usbmount now queues a mount
+# for every "sd*" device, including /dev/sda (our PATA-attached CF card,
+# root=/dev/sda1 in grub.cfg), via the synthetic "add" event udev's
+# boot-time coldplug pass generates for every already-present device.
+# Confirmed on real hardware: /dev/sda1 was mounted a second time under
+# /media/usb0, permanently occupying that slot.
+#
+# This file name-sorts after usbmount.rules (all-lowercase udev/eudev rule
+# filenames sort by ASCII order, and digits sort before letters, so a
+# leading "zz" beats any "NN-*.rules" convention too), so RUN:= here
+# overwrites -- rather than appends to -- whatever usbmount.rules already
+# queued for the same device event.
+KERNEL=="sda*", SUBSYSTEM=="block", RUN:=""
